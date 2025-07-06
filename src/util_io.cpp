@@ -273,7 +273,8 @@ void write_vox(const unsigned int* vtable, const voxinfo v_info, const std::stri
 #endif
 				if (checkVoxel(x, y, z, v_info.gridsize, vtable)) {
 					// Somehow, this makes the vox model come out correct way up. Some axes probably got switched along the way
-					voxwriter.AddVoxel(x, -z + v_info.gridsize.z, y, 1);
+					//voxwriter.AddVoxel(x, -z + v_info.gridsize.z, y, 1);
+					voxwriter.AddVoxel(x, y, z, 1);
 				}
 			}
 		}
