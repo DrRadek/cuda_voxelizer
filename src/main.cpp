@@ -16,6 +16,8 @@
 // CPU voxelizer fallback
 #include "cpu_voxelizer.h"
 
+#include "..\include\cuda_voxelizer.h"
+
 using namespace std;
 string version_number = "v0.6";
 
@@ -152,6 +154,84 @@ void parseProgramParameters(int argc, char* argv[]){
 	fprintf(stdout, "[Info] Output format: %s \n", OutputFormats[int(outputformat)]);
 	fprintf(stdout, "[Info] Using CPU-based voxelization: %s (default: No)\n", forceCPU ? "Yes" : "No");
 	fprintf(stdout, "[Info] Using Solid Voxelization: %s (default: No)\n", solidVoxelization ? "Yes" : "No");
+}
+
+extern "C" unsigned int* CudaVoxelizer::VoxelizeMesh(trimesh::TriMesh* themesh, int gridsize, bool forceCPU, bool solidVoxelization, string outputLocation) {
+	// PRINT PROGRAM INFO
+	Timer t; t.start();
+	printHeader();
+
+	themesh->need_faces(); // Trimesh: Unpack (possible) triangle strips so we have faces for sure
+	fprintf(stdout, "[Mesh] Number of triangles: %zu \n", themesh->faces.size());
+	fprintf(stdout, "[Mesh] Number of vertices: %zu \n", themesh->vertices.size());
+	fprintf(stdout, "[Mesh] Computing bbox \n");
+	themesh->need_bbox(); // Trimesh: Compute the bounding box (in model coordinates)
+
+	// COMPUTE BOUNDING BOX AND VOXELISATION PARAMETERS
+	fprintf(stdout, "\n## VOXELISATION SETUP \n");
+	// Initialize our own AABox, pad it so it's a cube
+	AABox<float3> bbox_mesh_cubed = createMeshBBCube<float3>(AABox<float3>(trimesh_to_float3(themesh->bbox.min), trimesh_to_float3(themesh->bbox.max)));
+	// Create voxinfo struct and print all info
+	voxinfo voxelization_info(bbox_mesh_cubed, make_uint3(gridsize, gridsize, gridsize), themesh->faces.size());
+	voxelization_info.print();
+	// Compute space needed to hold voxel table (1 voxel / bit)
+	unsigned int* vtable = 0; // Both voxelization paths (GPU and CPU) need this
+	size_t vtable_size = static_cast<size_t>(ceil(static_cast<size_t>(voxelization_info.gridsize.x) * static_cast<size_t>(voxelization_info.gridsize.y) * static_cast<size_t>(voxelization_info.gridsize.z) / 32.0f) * 4);
+
+	// CUDA initialization
+	bool cuda_ok = false;
+	if (!forceCPU)
+	{
+		// SECTION: Try to figure out if we have a CUDA-enabled GPU
+		fprintf(stdout, "\n## CUDA INIT \n");
+		cuda_ok = initCuda();
+		if (!cuda_ok) fprintf(stdout, "[Info] CUDA GPU not found\n");
+	}
+
+	// SECTION: The actual voxelization
+	if (cuda_ok && !forceCPU) {
+		// GPU voxelization
+		fprintf(stdout, "\n## TRIANGLES TO GPU TRANSFER \n");
+
+		float* device_triangles;
+
+		// Transfer triangle data to GPU
+		device_triangles = meshToGPU_managed(themesh);
+
+		// Allocate memory for voxel grid
+		fprintf(stdout, "[Voxel Grid] Allocating %s of CUDA-managed UNIFIED memory for Voxel Grid\n", readableSize(vtable_size).c_str());
+		checkCudaErrors(cudaMallocManaged((void**)&vtable, vtable_size));
+
+		fprintf(stdout, "\n## GPU VOXELISATION \n");
+		if (solidVoxelization) {
+			voxelize_solid(voxelization_info, device_triangles, vtable, false);
+		}
+		else {
+			voxelize(voxelization_info, device_triangles, vtable, false);
+		}
+	}
+	else {
+		// CPU VOXELIZATION FALLBACK
+		fprintf(stdout, "\n## CPU VOXELISATION \n");
+		if (!forceCPU) { fprintf(stdout, "[Info] No suitable CUDA GPU was found: Falling back to CPU voxelization\n"); }
+		else { fprintf(stdout, "[Info] Doing CPU voxelization (forced using command-line switch -cpu)\n"); }
+		// allocate zero-filled array
+		vtable = (unsigned int*)calloc(1, vtable_size);
+		if (!solidVoxelization) {
+			cpu_voxelizer::cpu_voxelize_mesh(voxelization_info, themesh, vtable, false);
+		}
+		else {
+			cpu_voxelizer::cpu_voxelize_mesh_solid(voxelization_info, themesh, vtable, false);
+		}
+	}
+
+	if (outputLocation != "")
+		write_vox(vtable, voxelization_info, outputLocation);
+
+	fprintf(stdout, "\n## STATS \n");
+	t.stop(); fprintf(stdout, "[Perf] Total runtime: %.1f ms \n", t.elapsed_time_milliseconds);
+
+	return vtable;
 }
 
 int main(int argc, char* argv[]) {

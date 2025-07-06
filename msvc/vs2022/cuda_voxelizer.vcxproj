@@ -23,7 +23,7 @@
     <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
@@ -31,7 +31,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.2.props" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.8.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -46,13 +46,11 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>C:\libs\trimesh2\include;C:\libs\glm;$(IncludePath)</IncludePath>
     <LibraryPath>C:\libs\trimesh2\lib.Win64;$(LibraryPath)</LibraryPath>
-    <CustomBuildAfterTargets>xcopy /y "$(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName).exe" "$(BINARY_OUTPUT_DIR)$(ProjectName).exe"</CustomBuildAfterTargets>
     <TargetName>$(ProjectName)_debug</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>C:\libs\trimesh2\include;C:\libs\glm;$(IncludePath)</IncludePath>
     <LibraryPath>C:\libs\trimesh2\lib.Win64;$(LibraryPath)</LibraryPath>
-    <CustomBuildAfterTargets>xcopy /y "$(SolutionDir)$(Platform)\$(Configuration)\$(ProjectName).exe" "$(BINARY_OUTPUT_DIR)$(ProjectName).exe"</CustomBuildAfterTargets>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -67,9 +65,6 @@
       <AdditionalDependencies>trimeshd.lib;cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
-copy "$(CudaToolkitBinDir)\cudart*.dll" "$(BINARY_OUTPUT_DIR)"
-copy /y "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).exe" "$(BINARY_OUTPUT_DIR)$(TargetName).exe"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <PtxAsOptionV>false</PtxAsOptionV>
@@ -97,9 +92,6 @@ copy /y "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).exe" "$(BINARY
       <AdditionalDependencies>trimesh.lib;cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
-copy "$(CudaToolkitBinDir)\cudart*.dll" "$(BINARY_OUTPUT_DIR)"
-copy /y "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).exe" "$(BINARY_OUTPUT_DIR)$(TargetName).exe"</Command>
     </PostBuildEvent>
     <CudaCompile>
       <FastMath>true</FastMath>
@@ -107,6 +99,18 @@ copy /y "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).exe" "$(BINARY
       <CodeGeneration>compute_52,sm_52;compute_60,sm_60;compute_61,sm_61;compute_70,sm_70;compute_75,sm_75;compute_80,sm_80</CodeGeneration>
     </CudaCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup>
+  <PostBuildEvent>
+    <Command>
+if not exist "$(BINARY_OUTPUT_DIR)" mkdir "$(BINARY_OUTPUT_DIR)"
+copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
+copy "$(CudaToolkitBinDir)\cudart*.dll" "$(BINARY_OUTPUT_DIR)"
+copy /y "$(TargetPath)" "$(BINARY_OUTPUT_DIR)$(TargetName).exe"
+copy /y "$(OutDir)$(TargetName).dll" "$(BINARY_OUTPUT_DIR)$(TargetName).dll"
+copy /y "$(OutDir)$(TargetName).lib" "$(BINARY_OUTPUT_DIR)$(TargetName).lib"
+    </Command>
+  </PostBuildEvent>
+</ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="..\..\src/voxelize.cu" />
     <CudaCompile Include="..\..\src\voxelize_solid.cu" />
@@ -119,6 +123,7 @@ copy /y "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).exe" "$(BINARY
     <ClCompile Include="..\..\src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\cuda_voxelizer.h" />
     <ClInclude Include="..\..\src\cpu_voxelizer.h" />
     <ClInclude Include="..\..\src\libs\cuda\helper_cuda.h" />
     <ClInclude Include="..\..\src\libs\cuda\helper_math.h" />
@@ -136,6 +141,6 @@ copy /y "$(SolutionDir)$(Platform)\$(Configuration)\$(TargetName).exe" "$(BINARY
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.2.targets" />
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.8.targets" />
   </ImportGroup>
 </Project>
