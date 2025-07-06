@@ -4,7 +4,7 @@
   <PropertyGroup Label="UserMacros">
     <TRIMESH_DIR>..\..\..\trimesh2</TRIMESH_DIR>
     <GLM_DIR>D:\dev\libs\glm\</GLM_DIR>
-    <BINARY_OUTPUT_DIR>..\..\lib.Win$(PlatformArchitecture).vs$(PlatformToolsetVersion)\</BINARY_OUTPUT_DIR>
+    <BINARY_OUTPUT_DIR>..\..\build\lib.Win$(PlatformArchitecture).vs$(PlatformToolsetVersion)\</BINARY_OUTPUT_DIR>
   </PropertyGroup>
   <PropertyGroup>
     <IncludePath>$(GLM_DIR);$(TRIMESH_DIR)\include\;$(IncludePath)</IncludePath>

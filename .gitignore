@@ -184,3 +184,6 @@ FakesAssemblies/
 #Generated voxel models
 *.binvox
 *.bin
+
+# Build
+build/
