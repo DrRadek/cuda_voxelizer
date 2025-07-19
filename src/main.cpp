@@ -161,6 +161,7 @@ extern "C" unsigned int* CudaVoxelizer::VoxelizeMesh(trimesh::TriMesh* themesh, 
 	Timer t; t.start();
 	printHeader();
 
+	themesh->clear_bbox(); // Make sure we don't reuse an existing bbox
 	themesh->need_faces(); // Trimesh: Unpack (possible) triangle strips so we have faces for sure
 	fprintf(stdout, "[Mesh] Number of triangles: %zu \n", themesh->faces.size());
 	fprintf(stdout, "[Mesh] Number of vertices: %zu \n", themesh->vertices.size());
